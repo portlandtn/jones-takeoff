@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jones · Building Takeoff</title>
+  <meta name="description" content="Roof and wall panel cut lists, trim and hardware quantities for rectangular metal buildings.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css?v=roof-order-1">
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+  <script src="/vendor/exceljs.min.js" defer></script>
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><a href="/" class="brand"><span class="brand-mark">J</span><span>JONES <small>BUILDING TAKEOFF</small></span></a><nav><button id="import-button">Open Excel job</button><button id="export-button" class="primary">Export Excel</button></nav></header>
+  <input type="file" id="import-file" accept=".xlsx" hidden>
+  <div id="drop-overlay" hidden>Drop your Jones Excel job to resume</div>
+  <div id="message" role="status" hidden></div>
+  <main>
+    <aside class="editor">
+      <div class="editor-head"><span class="eyebrow">PROJECT</span><input id="job-name" aria-label="Job name" value="Untitled building" maxlength="120"></div>
+      <form id="building-form" novalidate>
+        <section class="input-section"><h2><span>01</span> Building</h2><div id="dimension-fields" class="field-grid"></div>
+          <div id="ridge-fields"></div>
+          <div class="field-grid roof-fields"><label><span id="slope-label">Roof slope</span><div class="unit-input"><input id="slope" type="number" min="0.125" max="12" step="0.125" value="1"><span>: 12</span></div></label><label id="back-slope-field" hidden>Back roof slope<div class="unit-input"><input id="back-slope" type="number" min="0" step="any"><span>: 12</span></div></label></div>
+          <label class="roof-shape-field">Roof shape<select id="shape"><option value="gable">Gable</option><option value="single">Single slope</option></select></label>
+          <div id="roof-extra"></div><p id="roof-derived" class="hint"></p>
+        </section>
+        <section class="input-section"><h2><span>02</span> Panels</h2><div id="panel-fields"></div></section>
+        <section class="input-section"><h2><span>03</span> Purlins</h2><div id="purlin-fields"></div></section>
+        <section class="input-section"><div class="section-title"><h2><span>04</span> Openings</h2><button type="button" id="add-opening">+ Add</button></div><p class="hint">Choose the wall, distance from its left corner, and sill height. Use Cut Panels to control each opening.</p><div id="opening-list"></div></section>
+        <section class="input-section"><h2><span>05</span> Include materials</h2><div id="accessory-fields"></div></section>
+        <section class="input-section"><details id="rules-details"><summary>Takeoff settings & allowances</summary><div id="rule-fields"></div></details></section>
+      </form>
+    </aside>
+    <div class="workspace">
+      <div class="workspace-heading"><div><span class="eyebrow">BUILDING MODEL</span><h1 id="model-title">Untitled building</h1></div><span id="building-summary" class="muted"></span></div>
+      <section class="model-card" aria-label="Building preview"><div class="model-toolbar"><span id="model-caption">Gable · 1:12</span><div><label class="inline"><input type="checkbox" id="show-purlins"> Show purlins</label><button id="rotate-button" aria-pressed="true">Pause rotation</button><button id="reset-view">Reset view</button></div></div><div id="viewer" role="img" aria-label="Interactive three dimensional building model"></div><div class="model-footer"><span>Drag to orbit · Scroll to zoom</span><span id="model-dimensions"></span></div></section>
+      <div id="stats" class="stats"></div>
+      <section id="issues" class="issues" aria-live="polite" hidden></section>
+      <section class="takeoff"><div class="results-heading"><div><span class="eyebrow">MATERIAL SCHEDULE</span><h2>Your takeoff</h2></div><span id="line-count" class="muted"></span></div><div class="tabs" role="tablist" aria-label="Takeoff lists"><button role="tab" aria-selected="true" data-tab="panels">Panel cut list</button><button role="tab" aria-selected="false" data-tab="hardware">Trim & hardware</button><button role="tab" aria-selected="false" data-tab="layout">Panel layout</button><button role="tab" aria-selected="false" data-tab="assumptions">Rules & sources</button></div><div id="result-content" role="tabpanel"></div></section>
+      <footer class="page-footer">One-off jobs. Export Excel to save your inputs, then drag the same file here to resume.</footer>
+    </div>
+  </main>
+  <dialog id="opening-dialog"><form id="opening-form"><div class="section-title"><h2 id="opening-title">Add opening</h2><button type="button" id="cancel-opening" aria-label="Close opening form">✕</button></div><div id="opening-fields"></div><p class="hint">Position is measured from the left edge when viewing that wall from outside.</p><p id="opening-error" class="form-error" role="alert"></p><button class="primary" type="submit">Save opening</button></form></dialog>
+</body>
+</html>

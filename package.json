@@ -1,0 +1,21 @@
+{
+  "name": "jones-building-calculator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "check:vendor": "node scripts/check-vendor.mjs",
+    "check:public": "node scripts/public-audit.mjs",
+    "check:staged": "node scripts/public-audit.mjs --staged"
+  },
+  "dependencies": {
+    "three": "0.180.0",
+    "exceljs": "4.4.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

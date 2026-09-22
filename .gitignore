@@ -1,0 +1,41 @@
+# Dependencies and local tooling
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+.vscode/
+.idea/
+
+# Local configuration, credentials, and operational files
+.env
+.env.*
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.log
+*.pid
+*.service
+systemd/
+.local/
+private/
+backups/
+
+# Customer jobs, exports, and source documents
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.tsv
+*.pdf
+*.zip
+*.tar
+*.gz
+*.bak
+*.orig
+*.swp
+
+# dist/ is maintained source and MUST be committed.
