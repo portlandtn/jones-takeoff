@@ -23,4 +23,4 @@ jobs:
       - run: npm run check:vendor
       - run: npm run check:public
       - run: npm run build:cloudflare
-      - run: npx wrangler deploy --dry-run
+      - run: npm run check:cloudflare

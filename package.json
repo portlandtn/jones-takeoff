@@ -11,8 +11,7 @@
     "check:public": "node scripts/public-audit.mjs",
     "check:staged": "node scripts/public-audit.mjs --staged",
     "build:cloudflare": "node scripts/build-cloudflare.mjs",
-    "deploy:cloudflare": "npm run build:cloudflare && node scripts/deploy-cloudflare.mjs --production",
-    "deploy:cloudflare:staging": "npm run build:cloudflare && node scripts/deploy-cloudflare.mjs --staging"
+    "check:cloudflare": "wrangler pages functions build functions --outdir=.local/pages-functions"
   },
   "dependencies": {
     "exceljs": "4.4.0",

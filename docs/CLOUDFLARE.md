@@ -1,41 +1,41 @@
-# Cloudflare deployment
+# Cloudflare Pages deployment
 
-This deployment serves checked-in browser assets from Cloudflare storage. The Worker handles the root URL, health endpoint, and errors; it never fetches a home server. No database, server disk, tunnel, or home-hosted runner is required after cutover. The original local server remains available for rollback.
+The browser application is unchanged. Cloudflare Pages hosts its static files; a single Pages Function implements `/healthz`. `_routes.json` invokes Functions only for that endpoint, so ordinary calculator requests use static hosting. The app does not fetch the home server and needs no database, secrets, KV, R2, or runtime bindings.
 
-## Build and stage
+## Native GitHub setup
 
-Use Node 24 and `npm ci --ignore-scripts`, then run `npm test`, `npm run check:vendor`, `npm run check:public`, and `npm run build:cloudflare`. `npx wrangler deploy --dry-run` validates packaging. Generated assets and local runtime state are ignored. The generated header file preserves the local server's CSP, no-sniff, referrer, and cache policies.
-
-## Native GitHub integration
-
-Connect only the intended repository to Cloudflare Workers Builds. No GitHub Actions deployment secrets are needed: Cloudflare supplies its build authentication. The Worker name must be `jones-takeoff`, matching `wrangler.json`. Use repository root `/` and Node 24 (build variable `NODE_VERSION=24`). GitHub Actions performs verification only.
+Connect only the intended repository using the existing Cloudflare Pages GitHub connection. Use Pages (not Workers Builds), project name `jones-takeoff`, framework preset None, repository root, and build variable `NODE_VERSION=24`.
 
 Build command: `npm ci --ignore-scripts && npm test && npm run check:vendor && npm run check:public && npm run build:cloudflare`.
 
-For initial staging, select the migration branch as the deployment branch and use deploy command `npm run deploy:cloudflare:staging`. Do not set route variables yet. This deploys only the workers.dev endpoint, with no production routes. Disable builds for other branches during setup; do not point preview branches at the production deployment command.
+Build output directory: `.local/pages-assets`.
 
-After staging passes and the existing route is recorded, set Cloudflare **build variables** `CLOUDFLARE_ROUTE` to the verified exact hostname followed by `/*` and `CLOUDFLARE_ZONE_ID` to its zone ID. These are build configuration, not runtime Worker bindings or GitHub secrets. Change the deploy command to `npm run deploy:cloudflare`. Its generated ignored Wrangler configuration includes that exact route on every production deployment. Missing, partial, or wildcard-host routes fail before deployment. Ensure Cloudflare's build token has Workers Scripts edit for the account and Workers Routes edit limited to the target zone. A permission failure must be resolved in the build token; do not fall back to a route-less deployment.
+There is no deploy command, GitHub deployment secret, separate user-created API token, or production route variable. Pages automatically builds the repository-root `functions/` directory and deploys the build output. The build generates `_headers`, `_routes.json`, and a `404.html` to prevent accidental SPA fallback. Application files in `dist/` are copied without modification. GitHub Actions runs verification only.
 
-After the reviewed PR is merged, switch the Cloudflare deployment branch to `main` and verify a successful native build and deployment. The same production command and build variables must remain configured. Do not return to the staging command after cutover: staging intentionally removes routes. Local operators can use Wrangler login and the same commands/variables if needed. Plain `npx wrangler deploy` is for dry-run verification only after cutover; use the wrapper to preserve routing.
+Initially select `migration/cloudflare` as the Pages production branch, with no custom domain. Stage on the assigned pages.dev URL. After the PR is reviewed and merged, change the Pages production branch to `main`, trigger and verify its deployment, then confirm that later main pushes deploy automatically. Native Pages domain association persists across builds; no Wrangler route reconciliation is involved.
 
-Validate the resulting workers.dev staging URL: root, index.html, every asset, healthz, unknown paths, HEAD and unsupported methods, security headers, calculator edits, and Excel export/reopen. Confirm TLS before changing the public route.
+## Verify before cutover
+
+On the real pages.dev deployment verify root and all assets, security headers, GET/HEAD health, POST rejection, and missing-path 404. Test default calculations, single-slope/gable switching, workbook export and reopen. Compare asset bytes with the reviewed commit. Pages normally redirects `/index.html` to `/`; this preserves access but differs from the local server's direct 200. Missing paths use an HTML content type with the text `Not found`.
+
+For local verification: `npm run build:cloudflare`, `npm run check:cloudflare`, and `npx wrangler pages dev .local/pages-assets --compatibility-date=2026-09-30`. `check:cloudflare` compiles the health Function without deploying.
 
 ## Same-hostname cutover and rollback
 
-First inspect and privately record the existing hostname's DNS record, matching Worker routes, and tunnel ingress/origin mapping. Proxy response headers alone do not establish the origin. Do not alter shared tunnel configuration or other hostnames.
+Privately record the existing exact DNS record, proxy/TTL settings, tunnel mapping, and any matching Worker routes before changing the hostname. The existing Jones-only DNS rollback snapshot is preserved outside tracked files. Do not alter other hostnames or shared tunnel ingress.
 
-With staging verified, add an exact-hostname Worker route covering every path on the existing proxied hostname. Keep its DNS and old origin available. This places the Cloudflare-hosted assets ahead of the old origin without waiting for a DNS change or replacing the existing certificate. Verify the public response against staged asset hashes, health, browser workflows, and Cloudflare's actual route mapping. Do not stop the local service to test independence.
+First associate the existing hostname under the Pages project's Custom domains. Follow the dashboard's activation flow; do not point DNS at pages.dev before associating the custom domain, because this can produce a 522. Inspect any proposed automatic DNS replacement before accepting it. Verify the existing edge certificate covers the hostname and the Pages domain is ready for activation; do not assume a pages.dev certificate proves custom-hostname readiness. Keep the old origin running throughout. If the dashboard cannot provide a safe activation sequence, stop before DNS cutover and resolve that uncertainty.
 
-Rollback is removal of that new exact-hostname route (or restoration of its previous mapping if one existed). The retained DNS and tunnel then continue serving the original site. Record route IDs and prior values privately. Do not remove the local service until separately authorized.
+When ready, change only the existing hostname's CNAME target to the project's actual pages.dev hostname, retaining proxy status and TTL. Some dashboard flows do this as part of domain activation; avoid a duplicate edit. Verify custom-domain status, public HTTPS, health, asset hashes, and browser workflows immediately. Never stop the local service as an independence test.
 
-Confirm one successful native production build before declaring automatic publishing operational. Verify the exact route in Cloudflare after that deployment, along with public asset hashes and TLS. See [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/) for native build authentication and settings.
+Rollback: restore the saved exact CNAME target, proxy flag, and TTL, leaving tunnel and local service running. Verify public HTTPS and health against the original service. Remove the Pages custom-domain association only if necessary after DNS recovery; do not delete the Pages project or other DNS records. DNS rollback may take time to propagate, so it is not a substitute for pre-cutover validation.
 
-## Capacity and verification status
+## Verification and limits
 
-No paid subscription is required for initial deployment. Check the account's current Workers plan and quotas before cutover. Static asset requests are free; Worker invocations for the root URL, health, and errors are subject to the account's Workers limits. Select failure behavior deliberately when adding a route; origin fallback would still depend on home availability.
+Local Pages verification on 2026-10-01: default calculator results, single-slope/gable switching, and Excel export/reopen passed in Chrome without page errors. Root, assets, HEAD, health, 404, and unsupported methods behaved as described, with the original security policies. The health Function compiles successfully. Online deployment, custom-domain TLS/cutover, and native auto-publishing still require verification.
 
-Local verification on 2026-10-01: 25 existing tests passed; vendor integrity passed; Cloudflare dry-run passed. Chrome against the local Cloudflare runtime verified default results, switching single-slope/gable, workbook download and reopening the original job, with no page errors. Production staging, routing, TLS cutover, and publishing remain unverified until account access is available.
+Static requests use Pages hosting; health Function invocations use the account's Functions quota. Check the existing account plan and limits before cutover. No new paid subscription has been started.
 
-The dependency audit remains nonzero: two moderate entries for ExcelJS/uuid (previously documented) and a high brace-expansion advisory in the installed dependency tree. This migration does not change the checked-in browser bundles. Do not describe the dependency audit as clean.
+The dependency audit remains nonzero: two moderate entries for ExcelJS/uuid and a high brace-expansion entry. Browser vendor bundles are unchanged. This is not a clean dependency audit or an independent review.
 
-Native integration revision: three deployment configuration tests cover exact-route retention, missing/broad-route rejection, and staging isolation. Native online deployment remains pending authenticated setup.
+References: [Pages Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/), [Function routing](https://developers.cloudflare.com/pages/functions/routing/), [custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).

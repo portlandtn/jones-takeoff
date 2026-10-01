@@ -42,4 +42,3 @@ backups/
 
 # Cloudflare local runtime state
 .wrangler/
-.local-deploy.json

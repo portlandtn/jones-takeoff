@@ -1,20 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {configureDeployment} from '../scripts/cloudflare-config.mjs';
-const base={name:'jones-takeoff',assets:{binding:'ASSETS'}};
-const env={CLOUDFLARE_ROUTE:'takeoff.example.com/*',CLOUDFLARE_ZONE_ID:'a'.repeat(32)};
-test('production deploys retain exactly the supplied hostname route',()=>{
-  const result=configureDeployment(base,env,'production');
-  assert.deepEqual(result.routes,[{pattern:env.CLOUDFLARE_ROUTE,zone_id:env.CLOUDFLARE_ZONE_ID}]);
-  assert.equal(base.routes,undefined);
-});
-test('production fails closed with missing, partial, or broad routes',()=>{
-  for(const input of [{},{CLOUDFLARE_ROUTE:env.CLOUDFLARE_ROUTE},{...env,CLOUDFLARE_ROUTE:'*.example.com/*'},{...env,CLOUDFLARE_ROUTE:'example.com/app/*'},{...env,CLOUDFLARE_ZONE_ID:'bad'}]) {
-    assert.throws(()=>configureDeployment(base,input,'production'));
+import {onRequest} from '../functions/healthz.js';
+import {headers} from '../scripts/cloudflare-headers.mjs';
+test('Pages health endpoint preserves GET and HEAD contract',async()=>{
+  for(const method of ['GET','HEAD']) {
+    const response=onRequest({request:new Request('https://example.com/healthz',{method})});
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('Content-Type'),'application/json');
+    assert.equal(response.headers.get('Content-Security-Policy'),headers['Content-Security-Policy']);
+    assert.equal(await response.text(),method==='HEAD'?'':'{"status":"ok","app":"jones-calculator"}');
   }
 });
-test('staging cannot accidentally apply a production route',()=>{
-  assert.deepEqual(configureDeployment(base,{},'staging').routes,[]);
-  assert.throws(()=>configureDeployment(base,env,'staging'));
-  assert.throws(()=>configureDeployment({...base,routes:[env.CLOUDFLARE_ROUTE]}, {},'staging'));
+test('Pages health endpoint refuses unsupported methods',()=>{
+  for(const method of ['POST','PUT','DELETE','OPTIONS']) {
+    assert.equal(onRequest({request:new Request('https://example.com/healthz',{method})}).status,405);
+  }
 });
