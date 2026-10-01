@@ -1,4 +1,4 @@
-name: Cloudflare publishing
+name: Cloudflare verification
 on:
   push:
     branches: [main]
@@ -24,21 +24,3 @@ jobs:
       - run: npm run check:public
       - run: npm run build:cloudflare
       - run: npx wrangler deploy --dry-run
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: verify
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run deploy:cloudflare
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_ROUTE: ${{ vars.CLOUDFLARE_ROUTE }}
-          CLOUDFLARE_ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
