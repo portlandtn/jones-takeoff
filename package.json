@@ -9,13 +9,18 @@
     "vendor": "node scripts/vendor.mjs",
     "check:vendor": "node scripts/check-vendor.mjs",
     "check:public": "node scripts/public-audit.mjs",
-    "check:staged": "node scripts/public-audit.mjs --staged"
+    "check:staged": "node scripts/public-audit.mjs --staged",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
+    "deploy:cloudflare": "npm run build:cloudflare && node scripts/deploy-cloudflare.mjs"
   },
   "dependencies": {
-    "three": "0.180.0",
-    "exceljs": "4.4.0"
+    "exceljs": "4.4.0",
+    "three": "0.180.0"
   },
   "engines": {
     "node": ">=24"
+  },
+  "devDependencies": {
+    "wrangler": "4.145.0"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "name": "jones-takeoff",
+  "compatibility_date": "2026-09-30",
+  "main": "scripts/cloudflare-worker.mjs",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./.local/cloudflare-assets",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "run_worker_first": [
+      "/",
+      "/healthz"
+    ]
+  }
+}

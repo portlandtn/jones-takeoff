@@ -16,6 +16,8 @@ Jones Building Takeoff is a browser-based material quantity calculator for recta
 - [Development and verification](#development-and-verification)
 - [Limitations and references](#limitations-and-references)
 
+Cloudflare hosting and GitHub publishing setup: [deployment guide](docs/CLOUDFLARE.md).
+
 Detailed supporting documents:
 
 | Document | Purpose |
