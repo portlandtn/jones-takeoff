@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const staged = process.argv.includes('--staged');
 const roots = new Set(['README.md','CONTRIBUTING.md','SECURITY.md','THIRD_PARTY_NOTICES.md','.gitignore','package.json','package-lock.json','server.mjs']);
-const folders = new Set(['dist','docs','scripts','tests','.github']);
+const folders = new Set(['functions','dist','docs','scripts','tests','.github']);
 const allowedExtensions = new Set(['.md','.mjs','.js','.html','.css','.json','.txt','.yml','.yaml']);
-const skipped = new Set(['.git','node_modules','coverage','playwright-report','test-results','.local','private','backups','.vscode','.idea']);
+const skipped = new Set(['.git','.wrangler','node_modules','coverage','playwright-report','test-results','.local','private','backups','.vscode','.idea']);
 const privateName = /(?:^|\/)(?:\.env(?:\..*)?|\.npmrc|\.DS_Store)$|\.(?:pem|key|p12|pfx|crt|log|pid|service|xlsx?|xlsm|csv|tsv|pdf|zip|tar|gz|bak|orig|swp)$/i;
 const rules = [
   ['private key', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/],

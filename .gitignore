@@ -39,3 +39,6 @@ backups/
 *.swp
 
 # dist/ is maintained source and MUST be committed.
+
+# Cloudflare local runtime state
+.wrangler/
