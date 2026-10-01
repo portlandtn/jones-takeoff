@@ -32,10 +32,20 @@ Rollback: restore the saved exact CNAME target, proxy flag, and TTL, leaving tun
 
 ## Verification and limits
 
-Local Pages verification on 2026-10-01: default calculator results, single-slope/gable switching, and Excel export/reopen passed in Chrome without page errors. Root, assets, HEAD, health, 404, and unsupported methods behaved as described, with the original security policies. The health Function compiles successfully. Online deployment, custom-domain TLS/cutover, and native auto-publishing still require verification.
+Local Pages verification on 2026-10-01: default calculator results, single-slope/gable switching, and Excel export/reopen passed in Chrome without page errors. Root, assets, HEAD, health, 404, and unsupported methods behaved as described, with the original security policies. The health Function compiles successfully. The initial native Pages build and public custom-hostname acceptance subsequently passed; see the migration record below. Automatic publishing of the follow-up commit is verified separately using `/deployment.json`.
 
 Static requests use Pages hosting; health Function invocations use the account's Functions quota. Check the existing account plan and limits before cutover. No new paid subscription has been started.
 
 The dependency audit remains nonzero: two moderate entries for ExcelJS/uuid and a high brace-expansion entry. Browser vendor bundles are unchanged. This is not a clean dependency audit or an independent review.
 
 References: [Pages Git integration](https://developers.cloudflare.com/pages/configuration/git-integration/), [Function routing](https://developers.cloudflare.com/pages/functions/routing/), [custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
+
+## Production migration record — 2026-10-01
+
+The initial Pages production build used main commit `9180fbeef201c3ea1334a89ce28081d0d6f7259e`. The pages.dev deployment passed 22 HTTP/header/asset checks and a Chrome calculation/workbook export-and-reopen test. All 13 original application assets matched source bytes. GitHub verification also passed.
+
+The custom-domain cutover did cause an observed interruption. A three-second HTTPS health monitor recorded 21 HTTP 522 samples from 03:34:10.328 through 03:35:11.009 UTC. Successful responses resumed at 03:35:14.037 UTC. These are observation timestamps, not a measurement of every client's availability. The old local service remained running. The migration did not meet the requested zero-interruption condition; domain association/DNS activation readiness was insufficient at the time of cutover.
+
+After recovery, repeated public-hostname acceptance passed for HTTPS, root/health/HEAD/unsupported methods/404, security headers, original asset hashes, calculator edits, and workbook export/reopen. Cloudflare applies `no-store` to error responses instead of the requested `no-cache`, a stricter caching policy. Preserve the private monitoring and DNS rollback evidence.
+
+The build now generates `/deployment.json` containing only the public source commit SHA. After merging this record, compare `source_commit` from that endpoint on both pages.dev and the custom hostname with the merge commit. This verifies that the native Git-triggered build reached production without relying on unchanged application assets. Check the Pages build status as well. No application bundle changes are needed for this proof.
