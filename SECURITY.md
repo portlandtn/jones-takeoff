@@ -33,3 +33,9 @@ These are heuristic checks. They do not detect every secret format, personal nam
 ## Reporting a vulnerability
 
 Use the repository's private vulnerability reporting channel if the owner has enabled it, or an established private contact with the maintainer. Do not put credentials, customer workbooks, or exploit data containing private information in public issues. Include affected version, a minimal synthetic reproduction, expected behavior, actual behavior, and impact. No response-time guarantee or external security certification is claimed.
+
+## Bounded XLSX expansion
+
+Imports now copy the input, validate ZIP/local-directory consistency and stream each stored/deflated entry before ExcelJS parses it. Actual bytes must match each declared length and stay under 32 MiB total, with 300 entries, 5 MiB compressed input and a five-second deadline per entry. Duplicate names, split archives, encryption and unsupported compression fail closed. Browsers without `DecompressionStream('deflate-raw')` cannot import until upgraded; exports remain available.
+
+Synthetic Node tests include forged small declarations with much larger actual expansion and verify rejection before ExcelJS construction. Existing workbook fixtures still validate malformed/version/shape behavior. This bounds decompressed bytes; XML/Excel parsing remains on the caller thread and does not have an independent worker memory/CPU budget. Browser responsiveness under worst-case valid files remains a release acceptance item. No private workbook was used.

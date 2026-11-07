@@ -24,24 +24,63 @@ export function createWorkbook(ExcelJS, job){
   return book;
 }
 export async function exportWorkbook(ExcelJS,job){return createWorkbook(ExcelJS,job).xlsx.writeBuffer();}
-// Bound decompression before loading untrusted Excel files. Files remain in the browser.
+// Validate ZIP structure and bound actual decompression before ExcelJS parses XML.
 export function checkWorkbookArchive(buffer){
   const bytes=buffer instanceof Uint8Array?buffer:new Uint8Array(buffer);
   if(bytes.byteLength>5*1024*1024)throw new Error('Choose a Jones XLSX file smaller than 5 MB.');
   const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let end=-1;
-  for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--)if(view.getUint32(p,true)===0x06054b50){end=p;break;}
+  for(let p=bytes.length-22;p>=Math.max(0,bytes.length-65557);p--)
+    if(view.getUint32(p,true)===0x06054b50 && p+22+view.getUint16(p+20,true)===bytes.length){end=p;break;}
   if(end<0)throw new Error('This file is not a valid XLSX workbook.');
-  const entries=view.getUint16(end+10,true);let pos=view.getUint32(end+16,true),expanded=0;
-  if(entries>300||entries===65535)throw new Error('This workbook contains too many entries.');
-  for(let i=0;i<entries;i++){
-    if(pos+46>bytes.length||view.getUint32(pos,true)!==0x02014b50)throw new Error('The XLSX file is damaged.');
-    if(view.getUint16(pos+8,true)&1)throw new Error('Password-protected workbooks are not supported.');
-    expanded+=view.getUint32(pos+24,true);if(expanded>32*1024*1024)throw new Error('The expanded workbook is too large.');
-    pos+=46+view.getUint16(pos+28,true)+view.getUint16(pos+30,true)+view.getUint16(pos+32,true);
+  const count=view.getUint16(end+10,true),size=view.getUint32(end+12,true),start=view.getUint32(end+16,true);
+  if(view.getUint16(end+4,true)!==0||view.getUint16(end+6,true)!==0||view.getUint16(end+8,true)!==count)throw new Error('Split archives are not supported.');
+  if(count>300||count===0)throw new Error('This workbook contains too many or no entries.');
+  if(start+size!==end)throw new Error('The XLSX directory is damaged.');
+  let pos=start,expanded=0;const entries=[],names=new Set();
+  for(let i=0;i<count;i++){
+    if(pos+46>end||view.getUint32(pos,true)!==0x02014b50)throw new Error('The XLSX file is damaged.');
+    const flags=view.getUint16(pos+8,true),method=view.getUint16(pos+10,true),compressed=view.getUint32(pos+20,true),length=view.getUint32(pos+24,true);
+    const nameLength=view.getUint16(pos+28,true),extra=view.getUint16(pos+30,true),comment=view.getUint16(pos+32,true),local=view.getUint32(pos+42,true);
+    if(flags&1)throw new Error('Password-protected workbooks are not supported.');
+    if(![0,8].includes(method))throw new Error('Unsupported workbook compression.');
+    if(view.getUint16(pos+34,true)!==0||pos+46+nameLength+extra+comment>end)throw new Error('The XLSX directory is damaged.');
+    expanded+=length;if(expanded>32*1024*1024)throw new Error('The expanded workbook is too large.');
+    if(local+30>start||view.getUint32(local,true)!==0x04034b50||view.getUint16(local+8,true)!==method||view.getUint16(local+6,true)!==flags)throw new Error('The XLSX entry is damaged.');
+    const localNameLength=view.getUint16(local+26,true),offset=local+30+localNameLength+view.getUint16(local+28,true);
+    if(localNameLength!==nameLength||offset+compressed>start)throw new Error('The XLSX entry is damaged.');
+    const nameBytes=bytes.subarray(pos+46,pos+46+nameLength);
+    if(!nameBytes.every((v,j)=>v===bytes[local+30+j]))throw new Error('The XLSX entry name is inconsistent.');
+    const name=Array.from(nameBytes).join(',');if(names.has(name))throw new Error('Duplicate XLSX entries are not supported.');names.add(name);
+    entries.push({offset,compressed,length,method});pos+=46+nameLength+extra+comment;
+  }
+  if(pos!==end)throw new Error('The XLSX directory is damaged.');
+  return entries;
+}
+export async function verifyWorkbookExpansion(bytes){
+  const entries=checkWorkbookArchive(bytes);let total=0;
+  for(const entry of entries){
+    const compressed=bytes.subarray(entry.offset,entry.offset+entry.compressed);
+    let actual=0;
+    if(entry.method===0){actual=compressed.length;total+=actual;}
+    else {
+      if(typeof DecompressionStream==='undefined')throw new Error('This browser cannot safely import compressed workbooks. Use a current supported browser.');
+      const reader=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+      let timer;const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Workbook decompression timed out.')),5000);});
+      try {
+        while(true){
+          const {done,value}=await Promise.race([reader.read(),deadline]);if(done)break;
+          actual+=value.byteLength;total+=value.byteLength;
+          if(actual>entry.length||total>32*1024*1024)throw new Error('Actual workbook expansion exceeds the declared size or limit.');
+        }
+      } finally {clearTimeout(timer);await reader.cancel().catch(()=>{});}
+    }
+    if(actual!==entry.length||total>32*1024*1024)throw new Error('Workbook expanded size does not match its directory.');
   }
 }
 export async function importWorkbook(ExcelJS,buffer){
-  checkWorkbookArchive(buffer);const book=new ExcelJS.Workbook();await book.xlsx.load(buffer);
+  checkWorkbookArchive(buffer); // reject oversize input before allocating a copy
+  const bytes=(buffer instanceof Uint8Array?buffer:new Uint8Array(buffer)).slice();
+  await verifyWorkbookExpansion(bytes);const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
   const data=book.getWorksheet('Job Data');if(!data||data.getCell('A1').value!==FORMAT)throw new Error('This workbook was not exported by Jones Building Takeoff.');
   if(data.getCell('A2').value!==VERSION)throw new Error('This job file version is not supported.');
   if(data.rowCount>60)throw new Error('Saved job data is too large.');
