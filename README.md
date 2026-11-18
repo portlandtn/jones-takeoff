@@ -2,7 +2,7 @@
 
 Jones Building Takeoff is a browser-based material quantity calculator for rectangular metal buildings. It produces roof and wall panel cut lists, individual panel layouts, trim and accessory quantities, and an Excel workbook that can reopen the job later. A three-dimensional preview helps check the building shape and opening locations.
 
-**The output is an estimating takeoff.** It does not calculate structural capacity, select engineered fastening patterns, design drainage, determine code compliance, or produce a priced quotation. Quantities and part prefixes require review against the project drawings, current manufacturer requirements, and supplier selections before ordering. The project does not claim manufacturer endorsement or certification.
+**The output is an estimating takeoff.** It does not calculate structural capacity, select engineered fastening patterns, design drainage, determine code compliance, or produce a priced quotation. Panels, trim, and hardware are generic profiles, not a particular manufacturer's products. Quantities require review against the project drawings and supplier selections before ordering.
 
 ## Contents
 
@@ -14,7 +14,7 @@ Jones Building Takeoff is a browser-based material quantity calculator for recta
 - [Excel and saved jobs](#excel-and-saved-jobs)
 - [Architecture and privacy](#architecture-and-privacy)
 - [Development and verification](#development-and-verification)
-- [Limitations and references](#limitations-and-references)
+- [Limitations](#limitations)
 
 Cloudflare hosting and GitHub publishing setup: [deployment guide](docs/CLOUDFLARE.md).
 
@@ -69,19 +69,19 @@ For asymmetric gables, editing either slope or the building width moves the ridg
 
 Buildings have a rectangular footprint and a symmetric gable, asymmetric gable, or single-slope roof. The ridge runs along the building length. Openings are rectangular and may not overlap or extend beyond their wall or roof line.
 
-These values are the application's fixed profile mappings, not a statement of current product availability:
+Panels are generic profiles with common coverage widths and gauges. They are not tied to a manufacturer's catalog and carry no part numbers:
 
-| Use | Profile | Coverage | Gauge | Part prefix |
-| --- | --- | --- | --- | --- |
-| Roof | Loc Seam, not swaged | 16 in | 24 | `LSN24-` |
-| Roof | Loc Seam, swaged | 16 in | 24 | `LSS24-` |
-| Roof | R-panel | 36 in | 26 | `RPR26-1` |
-| Roof | Standing Seam 360 | 24 in | 24 | `SS324-` |
-| Wall | A-panel | 36 in | 26 | `APW26-` |
-| Wall | R-panel | 36 in | 26 | `RPW26-` |
-| Wall | Reverse R-panel | 36 in | 26 | `RRW26-` |
+| Use | Profile | Coverage | Gauge |
+| --- | --- | --- | --- |
+| Roof | R-panel | 36 in | 26 |
+| Roof | Standing seam, 16 in | 16 in | 24 |
+| Roof | Standing seam, 16 in, swaged | 16 in | 24 |
+| Roof | Standing seam, 24 in | 24 in | 24 |
+| Wall | A-panel | 36 in | 26 |
+| Wall | R-panel | 36 in | 26 |
+| Wall | Reverse R-panel | 36 in | 26 |
 
-Part prefixes are incomplete ordering identifiers. Finish, actual length, compatible accessories, and project-specific details remain to be selected. CFR and insulation roll takeoffs are not implemented. There is no price table, live pricing request, sales tax, labor rate, freight estimate, or currency calculation.
+Trim and hardware rows carry a selection note, such as matching the panel profile or choosing a size, in place of a part number. Finish, actual profile, compatible accessories, and project-specific details remain to be selected with the supplier. Insulation roll takeoffs are not implemented. There is no price table, live pricing request, sales tax, labor rate, freight estimate, or currency calculation.
 
 ## Mathematics and calculation conventions
 
@@ -164,7 +164,7 @@ Wall screws use ordered wall panel footage `F`, including section laps and panel
 
 Defaults are `r = 1.8`, `s = 0.60`, and `w = 0.05`. Each count is rounded separately. These are editable estimating allowances, not engineered attachment requirements.
 
-Standing-seam interior clips equal `(roof bays − 1) × purlin rows`, summed across roof planes. Rake clips are counted separately. R-panel support screws include purlin intersections and the low-eave support. Roof ends and endlaps have a separate screw allowance. Mastic divides estimated application length by reference roll length, adds waste, and rounds up to rolls. Downspouts use a maximum roof-run spacing allowance; this is not a rainfall or hydraulic calculation.
+Standing-seam interior clips equal `(roof bays − 1) × purlin rows`, summed across roof planes. Rake clips are counted separately. R-panel support screws include purlin intersections and the low-eave support. Roof ends and endlaps have a separate screw allowance. Mastic divides estimated application length by a default roll length, adds waste, and rounds up to rolls. Downspouts use a maximum roof-run spacing allowance; this is not a rainfall or hydraulic calculation.
 
 The [full calculation reference](docs/CALCULATIONS.md) specifies each hardware row, trim run, support count, mastic path, drainage allowance, area formula, and override interaction.
 
@@ -214,11 +214,11 @@ All material checkboxes start selected. Items specific to standing seam are omit
 
 **Hardware quantity overrides** remain fixed by material ID until reset. They affect the displayed/exported row only; dependent hardware counts continue to use the calculated geometry and counts. Unselected and inapplicable rows remain omitted even if an override exists.
 
-**Panel length overrides** apply to every piece with the same original calculated size, area, profile, gauge, and part prefix. They change panel footage and wall screw quantities, but do not relocate supports or change building geometry, openings, roof area, or section coordinates. Matching overrides persist until reset, including if a size disappears and later reappears. Lengths above the configured maximum generate a warning.
+**Panel length overrides** apply to every piece with the same original calculated size, area, profile, and gauge. They change panel footage and wall screw quantities, but do not relocate supports or change building geometry, openings, roof area, or section coordinates. Matching overrides persist until reset, including if a size disappears and later reappears. Lengths above the configured maximum generate a warning.
 
 ## Excel and saved jobs
 
-Export produces eight worksheets:
+Export produces seven worksheets:
 
 | Worksheet | Contents |
 | --- | --- |
@@ -228,12 +228,11 @@ Export produces eight worksheets:
 | Trim and Hardware | Selected and calculated quantities, units, stock lengths, rule status, basis |
 | Openings | Dimensions, wall, position, sill, Cut Panels choice |
 | Settings | Allowances, purlin settings, material selections, hardware overrides |
-| Sources | Technical reference links and rule descriptions |
 | Job Data | Hidden serialized job used for reopening, including panel-length overrides |
 
 Reopening restores **Job Data**, not edits made to output cells in Excel. The hidden sheet is not encryption or an access control: anyone with the file can read its contents, including the job name and dimensions. Preserve the original file if using a separate workbook for pricing or annotations.
 
-Only this application's `.xlsx` job format is supported. Import validates the format, version, saved inputs, and resulting takeoff before replacing the current job. Limits include a 5 MiB file size, 300 ZIP entries, 32 MiB declared expanded ZIP size, 100 openings, and 20,000 calculated panel pieces. See [Security](SECURITY.md) for limitations of those safeguards.
+Only this application's `.xlsx` job format is supported. Jobs saved before the generic panel catalog still open: their roof panel is mapped to the equivalent standing-seam profile, and saved panel-length edits carry over for R-panel and A-panel profiles. Length edits saved against the earlier standing-seam profile names are not carried over. Import validates the format, version, saved inputs, and resulting takeoff before replacing the current job. Limits include a 5 MiB file size, 300 ZIP entries, 32 MiB declared expanded ZIP size, 100 openings, and 20,000 calculated panel pieces. See [Security](SECURITY.md) for limitations of those safeguards.
 
 ## Architecture and privacy
 
@@ -252,7 +251,7 @@ There is no framework build step. The files under `dist/` are the maintained app
 | `scripts/public-audit.mjs` | Repeatable public-file and staged-content checks |
 | `tests/` | Calculation, measurement, workbook, server, and audit regression tests |
 
-Calculations and workbook processing occur in the browser. Application code has no job upload endpoint, analytics, database, account system, or automatic local-storage persistence. Libraries load from the same origin. Reference links are visited only when the user opens them; hosting infrastructure may independently log ordinary HTTP requests.
+Calculations and workbook processing occur in the browser. Application code has no job upload endpoint, analytics, database, account system, or automatic local-storage persistence. Libraries load from the same origin, and the application contains no external links. Hosting infrastructure may independently log ordinary HTTP requests.
 
 If supported by the browser, the app registers `read_building_takeoff` and `set_building_dimensions` through `document.modelContext`. These expose current job information and validated dimension updates to the browser's automation integration. They are not HTTP endpoints. See [Architecture](docs/ARCHITECTURE.md) for the exact scope.
 
@@ -273,7 +272,7 @@ Tests cover roof shapes and linked dimensions, measurements, coverage counts, op
 
 Before publication, follow [the release checklist](docs/RELEASING.md). The automated public-file check is a heuristic safeguard, not proof that all sensitive information has been found. An exact staged-file review and history review are separate requirements.
 
-## Limitations and references
+## Limitations
 
 - The model excludes structural members, load calculations, wind zones, engineered fastening, gutters sized from rainfall, labor, pricing, and insulation roll layouts.
 - No panel or trim offcut reuse is attempted. Sloped top cuts and partial opening cuts are field operations.
@@ -281,8 +280,8 @@ Before publication, follow [the release checklist](docs/RELEASING.md). The autom
 - Preview geometry is illustrative; the cut list and calculation rules define the estimate. The preview does not constitute fabrication drawings.
 - Profiles, stock lengths, laps, swage choices, sealant paths, clip assemblies, and attachment conditions require project-specific confirmation.
 - Exported files contain the job inputs. Refreshing or closing an unsaved page can lose the current job.
-- Current catalog availability and manufacturer requirements are not checked automatically.
+- No manufacturer catalog is consulted. Product availability and manufacturer requirements are not checked.
 
-The `SOURCES` map in `dist/engine.mjs` supplies the app and workbook reference lists. References identify relevant product families or technical context; they do not establish that every associated quantity rule is manufacturer-specified. The wall screw rate is explicitly identified as an editable estimating allowance. No private reference workbook is needed to run the application.
+Coverage widths, stock lengths, roll lengths, and application rates are estimating defaults, not manufacturer specifications. No private reference workbook is needed to run the application.
 
 Bundled third-party software retains its own licenses; see [Third-party notices](THIRD_PARTY_NOTICES.md). No license for this project's original code has yet been selected. Public visibility should not be interpreted as an open-source license grant.

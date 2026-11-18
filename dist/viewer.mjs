@@ -1,4 +1,4 @@
-import {roofGeometry} from './engine.mjs';
+import {roofGeometry,ROOFS} from './engine.mjs';
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 
@@ -53,7 +53,7 @@ export function createViewer(container) {
     const point=(x,z)=>[x-w/2,height(x),z];
     const roof= g?[[0,ridge],[ridge,w]]:[[0,w]];
     for(const [a,b] of roof){const f=face([point(a,-l/2),point(a,l/2),point(b,l/2),point(b,-l/2)],roofColor);if(job.showPurlins){f.material.transparent=true;f.material.opacity=.45;}line([point(a,-l/2),point(a,l/2),point(b,l/2),point(b,-l/2),point(a,-l/2)],'#244257');}
-    const coverage=({r:36,ss360:24,loc:16,locSwaged:16}[job.roofPanel]||36)/12;
+    const coverage=(ROOFS[job.roofPanel]?.width||36)/12;
     for(let z=-l/2+coverage;z<l/2;z+=coverage)for(const [a,b] of roof)line([[a-w/2,height(a)+.025,z],[b-w/2,height(b)+.025,z]],'#7892a6');
     if(job.showPurlins&&result.purlins) result.purlins.forEach((rows,side)=>rows.forEach(d=>{const along=d/12;const run=along/Math.sqrt(1+(geo.slopes[side]/12)**2);const x=g?(side===0?ridge-run:ridge+run):w-run;line([[x-w/2,height(x)+.08,-l/2],[x-w/2,height(x)+.08,l/2]],'#efab47');}));
     const slab=new THREE.Mesh(new THREE.BoxGeometry(w+1,.3,l+1),material('#a5b6c3'));slab.position.y=-.16;model.add(slab);

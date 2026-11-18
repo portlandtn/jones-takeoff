@@ -1,6 +1,6 @@
 # Calculation reference
 
-This document describes `dist/engine.mjs`. It specifies the implemented estimating model; it is not an installation specification. All lengths below are inches unless stated otherwise. Default values are defined in `DEFAULT_RULES` and summarized in the README. Application and workbook references supply technical context, not approval of each allowance.
+This document describes `dist/engine.mjs`. It specifies the implemented estimating model; it is not an installation specification. All lengths below are inches unless stated otherwise. Default values are defined in `DEFAULT_RULES` and summarized in the README. Panel profiles, stock lengths, and roll lengths are generic estimating defaults, not a manufacturer's specifications.
 
 ## Notation and rounding
 
@@ -119,7 +119,7 @@ Section coordinates include the band's bottom height. Girt positions are not use
 
 ### Grouping and length edits
 
-The cut-list key is `area | profile name | calculated rounded length | gauge | part prefix`. Faces and bay identifiers do not participate in grouping. A manual length replaces every matching piece's ordered length and is rounded upward to 1/16 inch. Groups with different original calculated sizes remain separate even if edited to the same length.
+The cut-list key is `area | profile name | calculated rounded length | gauge`. Keys saved by earlier versions ended with a part prefix; import drops it. Faces and bay identifiers do not participate in grouping. A manual length replaces every matching piece's ordered length and is rounded upward to 1/16 inch. Groups with different original calculated sizes remain separate even if edited to the same length.
 
 Linear footage is `sum(orderedLength)/12`, including overlaps. Wall screw quantities use wall-only footage. Manual length edits do not change section start/end coordinates, building geometry, purlin positions, bay count, roof laps, or geometric areas. Overrides for absent groups remain saved but inactive. An edit above `maxPanel` emits a warning.
 
@@ -178,7 +178,7 @@ Drop stock excludes offset runs and uses no stock lap. Three elbows per drop is 
 | Thermal blocks | `sum(niB)` |
 | Foam spacers | `sum(niB)` |
 
-R-panel uses foam roof closures and omits clips, eave plates, backup plates, thermal blocks, and spacers. Standing-seam mappings depend on roof profile and selected clip offset. Boundary details, component compatibility, and the choice between blocks and spacers remain project selections. Thermal blocks and spacers are counts per module/support intersection; their actual length and insulation requirements are not solved.
+R-panel uses foam roof closures and omits clips, eave plates, backup plates, thermal blocks, and spacers. Standing-seam rows note the selected clip height; the profile itself is left to the supplier selection. Boundary details, component compatibility, and the choice between blocks and spacers remain project selections. Thermal blocks and spacers are counts per module/support intersection; their actual length and insulation requirements are not solved.
 
 ## Screws
 
@@ -201,12 +201,12 @@ Define low-eave total `E = kL`, rake total `R = 2sum(Si)`, and gutter stock coun
 
 Wall sidelap allowance `V` is the sum over walls of `max(0,ceil(span/Cw)−1)` multiplied by that wall's greatest top height. This uses the ridge height for gable endwalls, and the high endpoint for single-slope ends. It does not subtract openings or integrate the exact height of each seam.
 
-| Material | Estimated application length | Roll length |
+| Material | Estimated application length | Default roll length |
 | --- | --- | --- |
-| Double-bead `H3000`, R-panel only | `2E + JCr` | 300 in |
-| Triple-bead `H3001`, standing seam only | `2E + JCr` | 360 in |
-| Flat tape `H3010` | `V + max(0,B−1)sum(Si)` for R-panel, or `V` for standing seam; add `E` if gutter selected | 600 in |
-| Rake double-bead `H3020` | `R` if rake selected, otherwise zero | 240 in |
+| Double-bead, R-panel only | `2E + JCr` | 300 in |
+| Triple-bead, standing seam only | `2E + JCr` | 360 in |
+| Flat tape | `V + max(0,B−1)sum(Si)` for R-panel, or `V` for standing seam; add `E` if gutter selected | 600 in |
+| Rake double-bead | `R` if rake selected, otherwise zero | 240 in |
 
 Each roll quantity is `ceil(applicationLength / rollLength × fm)`. The mastic material selection must be enabled. Closure selections do not independently remove the roof closure-path mastic allowance.
 

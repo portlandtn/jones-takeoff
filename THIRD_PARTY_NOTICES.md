@@ -7,6 +7,6 @@
 
 Files are copied without modification from their npm package distributions by `scripts/vendor.mjs`. `scripts/check-vendor.mjs` compares all six assets and license files with the installed packages. The ExcelJS prebuilt browser distribution contains bundled dependencies; retain its embedded notices. The npm lockfile separately records installed transitive dependencies and available license metadata. Updating that lockfile alone does not rebuild the browser distribution.
 
-Product names, panel designations, part prefixes, and technical reference links identify material families discussed by the calculator. No affiliation, certification, or endorsement is claimed. Profile compatibility and current ordering information must be confirmed for the project.
+Panel designations such as R-panel, A-panel, and standing seam are generic industry terms for common profiles. The calculator does not reference a manufacturer's products, part numbers, or catalog, and no affiliation, certification, or endorsement is claimed. Profile compatibility and ordering information must be confirmed with the supplier for the project.
 
 The original application code has no selected distribution license in this repository. The third-party licenses above apply to their respective components and do not select a license for the original project.
