@@ -42,7 +42,7 @@ Job schema version is `1`. Values are inches unless stated otherwise. The schema
 
 Each opening contains `id`, `wall`, `type`, `width`, `height`, `offset`, `sill`, and `cutPanels`. The latter is an explicit boolean: type affects the initial UI default, not later cutting logic.
 
-Older version-1 jobs without asymmetric fields or panel-length overrides remain supported. Import validation is not a strict unknown-field removal step: additional JSON properties can remain in a saved and re-exported job. Only the documented fields participate in calculations. Avoid adding confidential metadata to a job file on the assumption that it will be discarded.
+Older version-1 jobs without asymmetric fields or panel-length overrides remain supported. `upgradeJob()` runs on import before validation: it maps roof panel keys from before the generic catalog to their current equivalents and drops the part-prefix segment from saved panel-length keys. Import validation is not a strict unknown-field removal step: additional JSON properties can remain in a saved and re-exported job. Only the documented fields participate in calculations. Avoid adding confidential metadata to a job file on the assumption that it will be discarded.
 
 ## Input and output limits
 

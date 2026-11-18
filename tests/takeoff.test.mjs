@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
-import {defaultJob, calculate, validate, topHeight, DEFAULT_CUT, ROOFS, splitPanel, stockPieces} from '../dist/engine.mjs';
+import {defaultJob, calculate, validate, topHeight, upgradeJob, DEFAULT_CUT, ROOFS, WALLS, splitPanel, stockPieces} from '../dist/engine.mjs';
 import {createWorkbook, exportWorkbook, importWorkbook, checkWorkbookArchive} from '../dist/workbook.mjs';
 const opening=(changes={})=>({id:'opening-1',wall:'front',type:'rollup',width:72,height:96,offset:36,sill:0,cutPanels:true,...changes});
 const run=j=>{const r=calculate(j);assert.deepEqual(r.errors,[]);return r;};
@@ -12,8 +12,35 @@ test('100 × 50 gable: independent panel counts, roof geometry and purlin positi
   assert.equal(r.panels.find(p=>p.area==='Roof').length,301.0625);
   assert.equal(r.panels.reduce((sum,p)=>sum+p.quantity,0),r.layout.length);
 });
-test('every supported roof uses its specified coverage; CFR is excluded',()=>{
-  for(const [key,count] of Object.entries({r:68,ss360:100,loc:150,locSwaged:150})){const j=defaultJob();j.roofPanel=key;assert.equal(run(j).stats.roofPanels,count);}assert.equal(ROOFS.cfr,undefined);
+test('every supported roof uses its specified coverage',()=>{
+  const counts={r:68,ss24:100,ss16:150,ss16Swaged:150};assert.deepEqual(Object.keys(ROOFS).sort(),Object.keys(counts).sort());
+  for(const [key,count] of Object.entries(counts)){const j=defaultJob();j.roofPanel=key;assert.equal(run(j).stats.roofPanels,count);}
+});
+test('catalog and takeoff output stay generic: no links, part numbers or source fields',async()=>{
+  for(const roofPanel of Object.keys(ROOFS))for(const wallPanel of Object.keys(WALLS)){
+    const j=defaultJob();j.roofPanel=roofPanel;j.wallPanel=wallPanel;j.width=1200;j.openings=[opening(),opening({id:'window-2',wall:'right',type:'window',width:48,height:36,sill:48,offset:120})];
+    const r=run(j),text=JSON.stringify([ROOFS,WALLS,r]);
+    assert.ok(!/https?:|www\./i.test(text));
+    for(const row of [...r.layout,...r.panels,...r.hardware]){assert.ok(!('part' in row));assert.ok(!('source' in row));}
+    // Selections describe what to match or choose; none is a catalog code such as AB123-.
+    for(const h of r.hardware)assert.ok(!/\b[A-Z]{2,}\d|\d{3,}/.test(h.selection),h.selection);
+    const book=createWorkbook(ExcelJS,j);assert.equal(book.getWorksheet('Sources'),undefined);
+    book.eachSheet(sheet=>sheet.eachRow(row=>row.eachCell(cell=>{if(sheet.name!=='Job Data')assert.ok(!/https?:|www\./i.test(String(cell.value)));})));
+  }
+});
+test('jobs saved before the generic catalog reopen with equivalent panels and retained length edits',async()=>{
+  for(const [legacy,current] of Object.entries({loc:'ss16',locSwaged:'ss16Swaged',ss360:'ss24'})){
+    const saved=defaultJob();saved.roofPanel=legacy;
+    const wallRow=run(defaultJob()).panels.find(p=>p.area==='Wall');saved.panelLengths={[`${wallRow.lengthKey}|OLD-`]:wallRow.length+12};
+    assert.ok(validate(saved).length);
+    const book=createWorkbook(ExcelJS,defaultJob());book.getWorksheet('Job Data').getCell('A3').value=JSON.stringify(saved);
+    const loaded=await importWorkbook(ExcelJS,await book.xlsx.writeBuffer());
+    assert.equal(loaded.roofPanel,current);assert.equal(saved.roofPanel,legacy);
+    assert.deepEqual(loaded.panelLengths,{[wallRow.lengthKey]:wallRow.length+12});
+    assert.equal(run(loaded).panels.find(p=>p.lengthKey===wallRow.lengthKey).length,wallRow.length+12);
+  }
+  const current=defaultJob();current.panelLengths={'Wall|R-panel wall|192|26':204};assert.deepEqual(upgradeJob(current),current);
+  for(const bad of [null,[],'x'])assert.equal(upgradeJob(bad),bad);
 });
 test('all material checkboxes default on, inapplicable standing seam items are omitted',()=>{
   const j=defaultJob();assert.ok(Object.values(j.include).every(Boolean));assert.ok(!run(j).hardware.some(h=>h.id==='panel-clips'));
@@ -44,11 +71,11 @@ test('gable bay spanning peak includes the highest point rather than just endpoi
   assert.equal(r.layout.find(p=>p.face==='Left end wall'&&p.from===288).length,217);
 });
 test('explicit purlin counts change clip quantities by roof side, excluding eave',()=>{
-  const j=defaultJob();j.roofPanel='ss360';j.purlinMode='count';j.purlinCounts=[4,6];
+  const j=defaultJob();j.roofPanel='ss24';j.purlinMode='count';j.purlinCounts=[4,6];
   const r=run(j);assert.deepEqual(r.stats.purlinRows,[4,6]);assert.equal(r.hardware.find(h=>h.id==='panel-clips').quantity,490);
 });
 test('roof split lengths obey max and reconstruct slope including overlaps',()=>{
-  const j=defaultJob();j.width=1200;j.roofPanel='ss360';const r=run(j);
+  const j=defaultJob();j.width=1200;j.roofPanel='ss24';const r=run(j);
   const parts=r.layout.filter(p=>p.face==='Front roof'&&p.bay===1);assert.equal(parts.length,2);
   close(parts.reduce((s,p)=>s+(p.end-p.start),0)-j.rules.roofLap,r.slopeLength);
   assert.ok(parts.every(p=>p.length<=480));const end=parts[0].end;
@@ -74,11 +101,11 @@ test('manual quantity overrides survive recalculation and can be reset',()=>{
   delete j.overrides['wall-screws-12'];r=run(j);assert.notEqual(r.hardware.find(h=>h.id==='wall-screws-12').quantity,99);
 });
 test('Excel round trip restores dimensions, every opening flag, purlin overrides and material selections',async()=>{
-  const j=defaultJob();j.name='Example 60 × 100';j.roofPanel='locSwaged';j.purlinMode='count';j.purlinCounts=[4,6];j.include.gutter=false;j.overrides['wall-screws-14']=123;j.openings=[opening({offset:48,width:60}),opening({id:'window-2',wall:'right',type:'window',width:48,height:36,sill:48,offset:120,cutPanels:false})];
+  const j=defaultJob();j.name='Example 60 × 100';j.roofPanel='ss16Swaged';j.purlinMode='count';j.purlinCounts=[4,6];j.include.gutter=false;j.overrides['wall-screws-14']=123;j.openings=[opening({offset:48,width:60}),opening({id:'window-2',wall:'right',type:'window',width:48,height:36,sill:48,offset:120,cutPanels:false})];
   const bytes=await exportWorkbook(ExcelJS,j);const loaded=await importWorkbook(ExcelJS,bytes);assert.deepEqual(loaded,j);assert.deepEqual(run(loaded).stats,run(j).stats);
   const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);assert.equal(book.getWorksheet('Job Data').state,'veryHidden');assert.equal(book.getWorksheet('Openings').getCell('G2').value,'Yes');assert.equal(book.getWorksheet('Openings').getCell('G3').value,'No');
-  const cut=book.getWorksheet('Panel Cut List');let count=0;cut.eachRow((row,i)=>{if(i>1)count+=row.getCell(6).value;});assert.equal(count,run(j).layout.length);
-  book.getWorksheet('Panel Cut List').getCell('F2').value=9999;assert.deepEqual(await importWorkbook(ExcelJS,await book.xlsx.writeBuffer()),j);
+  const cut=book.getWorksheet('Panel Cut List');let count=0;cut.eachRow((row,i)=>{if(i>1)count+=row.getCell(5).value;});assert.equal(count,run(j).layout.length);
+  book.getWorksheet('Panel Cut List').getCell('E2').value=9999;assert.deepEqual(await importWorkbook(ExcelJS,await book.xlsx.writeBuffer()),j);
 });
 test('Excel rejects arbitrary workbooks and invalid saved job state without evaluating formulas',async()=>{
   const arbitrary=new ExcelJS.Workbook();arbitrary.addWorksheet('Sheet1');await assert.rejects(importWorkbook(ExcelJS,await arbitrary.xlsx.writeBuffer()),/not exported/);

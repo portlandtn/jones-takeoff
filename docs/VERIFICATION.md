@@ -20,7 +20,7 @@ Tests include geometry, measurement round trips, asymmetric linked edits, openin
 
 ## Publication review
 
-There was no `.git` repository at the start of preparation, so there was no existing local commit history or remote to inspect. Installation-specific configuration and identifying deployment references were removed from public candidates. No customer workbook or price dataset is included. Public profile identifiers and technical reference links remain intentionally present.
+There was no `.git` repository at the start of preparation, so there was no existing local commit history or remote to inspect. Installation-specific configuration and identifying deployment references were removed from public candidates. No customer workbook or price dataset is included. Public profile identifiers and technical reference links remained present in that release; they were later replaced with a generic panel catalog and the reference links were removed (rules version `2026-11-17.1`).
 
 Three complementary publication checks were performed: manual inventory/content review, heuristic checks of the working tree and a simulated first Git index, and a separate detect-secrets scan of the tracked candidate files. The scanner reported 401 entropy findings, all in the byte-identical upstream ExcelJS bundle (cryptographic constants and bundled data); none were in original application code or documentation. No project credentials were identified. This is a bounded review, not a guarantee that a scanner can identify every sensitive business fact.
 

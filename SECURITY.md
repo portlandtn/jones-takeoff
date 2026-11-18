@@ -2,7 +2,7 @@
 
 ## Data boundary
 
-The application calculates and handles Excel files in the browser. It has no server-side job storage, upload route, account system, or analytics integration. Browser assets are served from the same origin. Opening a reference link contacts the referenced external site. Hosting infrastructure may log ordinary HTTP requests independently of the app.
+The application calculates and handles Excel files in the browser. It has no server-side job storage, upload route, account system, or analytics integration. Browser assets are served from the same origin. The application contains no external links. Hosting infrastructure may log ordinary HTTP requests independently of the app.
 
 Jobs are held in memory until exported. Exported workbooks contain the job name, dimensions, openings, allowances, and overrides in visible and hidden sheets. Hidden sheets provide no confidentiality. Browser automation can read the current job when the documented `document.modelContext` integration is available. Do not put credentials or unrelated confidential metadata in a job file.
 
